@@ -15,7 +15,7 @@ using boost::asio::ip::tcp;
 
 //----------------------------------------------------------------------
 
-typedef std::deque<std::shared_ptr<Serialization>> chat_message_queue;
+typedef std::deque<std::shared_ptr<Serializer>> chat_message_queue;
 
 //----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ class chat_participant
 {
 public:
     virtual ~chat_participant() = default;
-    virtual void deliver(const std::string& recipient, const std::shared_ptr<Serialization>& msg) = 0;
+    virtual void deliver(const std::string& recipient, const std::shared_ptr<Serializer>& msg) = 0;
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
@@ -54,7 +54,7 @@ public:
 
     }
 
-    void deliver(const std::string& recipient, const std::shared_ptr<Serialization>& msg)
+    void deliver(const std::string& recipient, const std::shared_ptr<Serializer>& msg)
     {
         if (participants_.find(recipient) != participants_.end()) {
             recent_msgs_.push_back(msg);
@@ -93,7 +93,7 @@ public:
 
     }
 
-    void deliver(const std::string& recipient, const std::shared_ptr<Serialization>& msg) override
+    void deliver(const std::string& recipient, const std::shared_ptr<Serializer>& msg) override
     {
         bool write_in_progress = !write_msgs_.empty();
         write_msgs_.push_back(msg);
@@ -130,7 +130,7 @@ private:
     {
         auto self(shared_from_this());
         boost::asio::async_read(socket_,
-                                boost::asio::buffer(read_msg_->head(), Serialization::HEADER_LENGTH),
+                                boost::asio::buffer(read_msg_->header(), Serializer::HEADER_LENGTH),
                                 boost::asio::bind_executor(strand_,[this, self](boost::system::error_code ec, std::size_t /*length*/)
                                 {
                                     if (!ec && read_msg_->decode_header())
@@ -148,15 +148,14 @@ private:
     {
         auto self(shared_from_this());
         boost::asio::async_read(socket_,
-                                boost::asio::buffer(read_msg_->body(), read_msg_->body_length()),
+                                boost::asio::buffer(read_msg_->data(), read_msg_->body_length()),
                                 boost::asio::bind_executor(strand_,[this, self](boost::system::error_code ec, std::size_t /*length*/)
                                 {
                                     if (!ec) {
                                         // allow through network to get external ip
-                                        std::string client_ip = socket_.remote_endpoint().address().to_string();
+                                        //std::string client_ip = socket_.remote_endpoint().address().to_string();
                                         //local ip
-                                        std::string username = read_msg_->parse_bson(read_msg_->body(),
-                                                                                     read_msg_->body_length(), client_ip);
+                                        std::string username = read_msg_->get_username();
                                         room_.deliver(username, read_msg_);
                                         do_read_header();
                                     }
@@ -194,7 +193,7 @@ private:
 
     tcp::socket socket_;
     chat_room& room_;
-    std::shared_ptr<Serialization> read_msg_ = std::make_shared<Serialization>();
+    std::shared_ptr<Serializer> read_msg_ = std::make_shared<Serializer>();
     chat_message_queue write_msgs_;
     boost::asio::streambuf buf;
     boost::asio::io_context::strand& strand_;

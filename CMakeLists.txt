@@ -12,6 +12,6 @@ IF(Boost_FOUND)
 ENDIF(Boost_FOUND)
 SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY})
 
-add_executable(VegaMessengerServer main.cpp Serialization.h)
+add_executable(VegaMessengerServer main.cpp Serialization.h Serializer.cpp)
 
 target_link_libraries(VegaMessengerServer ${USED_LIBS} Boost::boost)
