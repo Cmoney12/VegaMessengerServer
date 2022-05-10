@@ -148,7 +148,7 @@ private:
     {
         auto self(shared_from_this());
         boost::asio::async_read(socket_,
-                                boost::asio::buffer(read_msg_->data(), read_msg_->body_length()),
+                                boost::asio::buffer(read_msg_->body(), read_msg_->body_length()),
                                 boost::asio::bind_executor(strand_,[this, self](boost::system::error_code ec, std::size_t /*length*/)
                                 {
                                     if (!ec) {

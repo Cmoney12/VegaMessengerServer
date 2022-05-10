@@ -30,6 +30,8 @@ public:
 
     const char* data() const;
 
+    char* body();
+
     std::size_t length() const;
 
     std::size_t body_length() const;

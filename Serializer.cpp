@@ -6,9 +6,11 @@
 
 Serializer::Serializer(): body_length_(0) {}
 
-char *Serializer::data() { return data_.get() + HEADER_LENGTH; }
+char *Serializer::data() { return data_.get(); }
 
-const char *Serializer::data() const { return data_.get() + HEADER_LENGTH; }
+const char *Serializer::data() const { return data_.get(); }
+
+char *Serializer::body() { return data_.get() + HEADER_LENGTH; }
 
 std::size_t Serializer::length() const { return HEADER_LENGTH + body_length_; }
 
@@ -23,7 +25,7 @@ void Serializer::serialize_message(const Message &message) {
 
     // serialize it to an array with a
     // four byte header
-    body_length_ = sbuf.size() + 1;
+    body_length_ = sbuf.size();
     data_ = std::make_unique<char[]>(HEADER_LENGTH + body_length_);
     encode_header();
     std::memcpy(data_.get() + HEADER_LENGTH, sbuf.data(), sbuf.size());
@@ -44,7 +46,8 @@ bool Serializer::decode_header() {
         body_length_ = 0;
         return false;
     }
-    data_ = std::make_unique<char[]>(body_length_ + 1);
+    data_ = std::make_unique<char[]>(body_length_ + HEADER_LENGTH);
+    encode_header();
     return true;
 }
 
