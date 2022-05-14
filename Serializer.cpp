@@ -40,7 +40,7 @@ Message Serializer::unpack_message() {
 }
 
 bool Serializer::decode_header() {
-    body_length_ = std::atoi(header_);
+    body_length_ = (header_[0] | (header_[1] << 8) | header_[2] << 16) | (header_[3] << 24);
     if (body_length_ > MAX_MESSAGE_SIZE)
     {
         body_length_ = 0;
@@ -51,10 +51,15 @@ bool Serializer::decode_header() {
     return true;
 }
 
-void Serializer::encode_header() {
-    char header[HEADER_LENGTH + 1] = "";
-    std::sprintf(header, "%4d", static_cast<int>(body_length_));
-    std::memcpy(data_.get(), header, HEADER_LENGTH);
+bool Serializer::encode_header() {
+    if (body_length_ <= MAX_MESSAGE_SIZE && body_length_) {
+        data_.get()[3] = (body_length_ >> 24) & 0xFF;
+        data_.get()[2] = (body_length_ >> 16) & 0xFF;
+        data_.get()[1] = (body_length_ >> 8) & 0xFF;
+        data_.get()[0] = body_length_ & 0xFF;
+        return true;
+    }
+    return false;
 }
 
 std::string Serializer::get_username() {

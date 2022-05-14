@@ -46,10 +46,10 @@ public:
 
     bool decode_header();
 
-    void encode_header();
+    bool encode_header();
 
 private:
-    std::size_t body_length_;
+    int body_length_;
     std::unique_ptr<char[]> data_;
     enum { MAX_MESSAGE_SIZE = 9999999999 };
     char header_[HEADER_LENGTH + 1]{};
