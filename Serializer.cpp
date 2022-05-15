@@ -25,7 +25,7 @@ void Serializer::serialize_message(const Message &message) {
 
     // serialize it to an array with a
     // four byte header
-    body_length_ = sbuf.size();
+    body_length_ = (int)sbuf.size();
     data_ = std::make_unique<char[]>(HEADER_LENGTH + body_length_);
     encode_header();
     std::memcpy(data_.get() + HEADER_LENGTH, sbuf.data(), sbuf.size());
