@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include <cstdlib>
 #include <deque>
 #include <list>
@@ -9,9 +8,11 @@
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include <unordered_map>
+#include <boost/asio/ssl.hpp>
 #include "Serialization.h"
 
 using boost::asio::ip::tcp;
+using ssl_socket = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
 
 //----------------------------------------------------------------------
 
@@ -79,7 +80,7 @@ class chat_session
           public std::enable_shared_from_this<chat_session>
 {
 public:
-    chat_session(tcp::socket socket, chat_room& room, boost::asio::io_context::strand& strand)
+    chat_session(boost::asio::ssl::stream<tcp::socket> socket, chat_room& room, boost::asio::io_context::strand& strand, boost::asio::ssl::context& ssl_ctx)
             : socket_(std::move(socket)),
               room_(room),
               strand_(strand)
@@ -88,9 +89,21 @@ public:
 
     void start()
     {
-        read_username();
-        do_read_header();
+        do_handshake();
+    }
 
+    void do_handshake()
+    {
+        auto self(shared_from_this());
+        socket_.async_handshake(boost::asio::ssl::stream_base::server,
+                                boost::asio::bind_executor(strand_,  [this, self](boost::system::error_code ec)
+                                {
+                                    if (!ec)
+                                    {
+                                        read_username();
+                                        do_read_header();
+                                    }
+                                }));
     }
 
     void deliver(const std::string& recipient, const std::shared_ptr<Serializer>& msg) override
@@ -191,7 +204,7 @@ private:
                                                             }));
     }
 
-    tcp::socket socket_;
+    ssl_socket socket_;
     chat_room& room_;
     std::shared_ptr<Serializer> read_msg_ = std::make_shared<Serializer>();
     chat_message_queue write_msgs_;
@@ -206,8 +219,13 @@ class chat_server
 public:
     chat_server(boost::asio::io_context& io_context,
                 const tcp::endpoint& endpoint, boost::asio::io_context::strand& strand)
-            : acceptor_(io_context, endpoint), strand_(strand)
+            : acceptor_(io_context, endpoint), strand_(strand), context_(boost::asio::ssl::context::sslv23)
     {
+        context_.set_options(
+                boost::asio::ssl::context::default_workarounds
+                | boost::asio::ssl::context::no_sslv2
+                | boost::asio::ssl::context::single_dh_use);
+
         do_accept();
     }
 
@@ -219,7 +237,9 @@ private:
                 {
                     if (!ec)
                     {
-                        std::make_shared<chat_session>(std::move(socket), room_, strand_)->start();
+                        std::make_shared<chat_session>(
+                                boost::asio::ssl::stream<tcp::socket>(
+                                        std::move(socket), context_))->start();
                     }
 
                     do_accept();
@@ -229,6 +249,7 @@ private:
     tcp::acceptor acceptor_;
     chat_room room_;
     boost::asio::io_context::strand& strand_;
+    boost::asio::ssl::context context_;
 };
 
 //----------------------------------------------------------------------
@@ -246,6 +267,7 @@ int main(int argc, char* argv[])
         int thread_number = 3;
         boost::asio::io_context io_context;
         std::vector<std::thread> server_threads;
+
         tcp::endpoint endpoint(tcp::v4(), port);
         boost::asio::io_context::strand strand_ = boost::asio::io_service::strand(io_context);
         std::shared_ptr<chat_server> server = std::make_shared<chat_server>(io_context, endpoint, strand_);
