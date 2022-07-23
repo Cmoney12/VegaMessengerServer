@@ -12,6 +12,17 @@ IF(Boost_FOUND)
 ENDIF(Boost_FOUND)
 SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY})
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(OPENSSL REQUIRED openssl)
+
+if( OPENSSL_FOUND )
+    include_directories(${OPENSSL_INCLUDE_DIRS})
+    message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
+else()
+    message(ERROR "Could not find OpenSSL")
+    # Error; with REQUIRED, pkg_search_module() will throw an error by it's own
+endif()
+
 add_executable(VegaMessengerServer main.cpp Serialization.h Serializer.cpp)
 
-target_link_libraries(VegaMessengerServer ${USED_LIBS} Boost::boost)
+target_link_libraries(VegaMessengerServer ${USED_LIBS} Boost::boost ${OPENSSL_LIBRARIES})

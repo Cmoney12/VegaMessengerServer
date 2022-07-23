@@ -80,7 +80,7 @@ class chat_session
           public std::enable_shared_from_this<chat_session>
 {
 public:
-    chat_session(boost::asio::ssl::stream<tcp::socket> socket, chat_room& room, boost::asio::io_context::strand& strand, boost::asio::ssl::context& ssl_ctx)
+    chat_session(boost::asio::ssl::stream<tcp::socket> socket, chat_room& room, boost::asio::io_context::strand& strand)
             : socket_(std::move(socket)),
               room_(room),
               strand_(strand)
@@ -225,11 +225,20 @@ public:
                 boost::asio::ssl::context::default_workarounds
                 | boost::asio::ssl::context::no_sslv2
                 | boost::asio::ssl::context::single_dh_use);
+        context_.set_password_callback(std::bind(&chat_server::get_password));
+        context_.use_certificate_chain_file("server.pem");
+        context_.use_private_key_file("server.pem", boost::asio::ssl::context::pem);
+        context_.use_tmp_dh_file("dh2048.pem");
 
         do_accept();
     }
 
 private:
+    static std::string get_password()
+    {
+        return "test";
+    }
+
     void do_accept()
     {
         acceptor_.async_accept(
@@ -239,7 +248,7 @@ private:
                     {
                         std::make_shared<chat_session>(
                                 boost::asio::ssl::stream<tcp::socket>(
-                                        std::move(socket), context_))->start();
+                                        std::move(socket), context_), room_, strand_)->start();
                     }
 
                     do_accept();
