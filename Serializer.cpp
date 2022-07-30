@@ -63,18 +63,7 @@ bool Serializer::encode_header() {
 }
 
 std::string Serializer::get_username() {
-    int good = 0;
-    for (int i = 0 ; i != length(); i++) {
-        if (data_[i] == '\0') {
-            good = 1;
-            break;
-        }
-    }
-    if (good) {
-        printf("String is null-terminated.\n");
-    } else {
-        printf("String is not null-terminated; cannot print.\n");
-    }
+
     msgpack::object_handle handle = msgpack::unpack((char*)data_.get() + HEADER_LENGTH, body_length_);
     msgpack::object obj = handle.get();
     Message message = obj.as<Message>();
