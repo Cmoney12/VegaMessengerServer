@@ -9,6 +9,7 @@
 #include <boost/lexical_cast.hpp>
 #include <unordered_map>
 #include <boost/asio/ssl.hpp>
+#include <boost/filesystem.hpp>
 #include "Serialization.h"
 
 using boost::asio::ip::tcp;
@@ -226,9 +227,9 @@ public:
                 | boost::asio::ssl::context::no_sslv2
                 | boost::asio::ssl::context::single_dh_use);
         context_.set_password_callback(std::bind(&chat_server::get_password));
-        context_.use_certificate_chain_file("server.pem");
-        context_.use_private_key_file("server.pem", boost::asio::ssl::context::pem);
-        context_.use_tmp_dh_file("dh2048.pem");
+        context_.use_certificate_chain_file(server_crt_path_.string());
+        context_.use_private_key_file(server_key_path.string(), boost::asio::ssl::context::pem);
+        context_.use_tmp_dh_file(dh_path.string());
 
         do_accept();
     }
@@ -259,6 +260,10 @@ private:
     chat_room room_;
     boost::asio::io_context::strand& strand_;
     boost::asio::ssl::context context_;
+    boost::filesystem::path full_path{boost::filesystem::current_path().parent_path()};
+    boost::filesystem::path server_crt_path_ = full_path / "server.crt";
+    boost::filesystem::path server_key_path = full_path / "server.key";
+    boost::filesystem::path dh_path = full_path / "dh2048.pem";
 };
 
 //----------------------------------------------------------------------

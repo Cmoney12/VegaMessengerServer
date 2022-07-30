@@ -6,17 +6,17 @@
 
 Serializer::Serializer(): body_length_(0) {}
 
-char *Serializer::data() { return data_.get(); }
+unsigned char *Serializer::data() { return data_.get(); }
 
-const char *Serializer::data() const { return data_.get(); }
+const unsigned char *Serializer::data() const { return data_.get(); }
 
-char *Serializer::body() { return data_.get() + HEADER_LENGTH; }
+unsigned char *Serializer::body() { return data_.get() + HEADER_LENGTH; }
 
 std::size_t Serializer::length() const { return HEADER_LENGTH + body_length_; }
 
 std::size_t Serializer::body_length() const { return body_length_; }
 
-char *Serializer::header() { return header_; }
+unsigned char *Serializer::header() { return header_; }
 
 void Serializer::serialize_message(const Message &message) {
     //pack our data
@@ -26,13 +26,13 @@ void Serializer::serialize_message(const Message &message) {
     // serialize it to an array with a
     // four byte header
     body_length_ = (int)sbuf.size();
-    data_ = std::make_unique<char[]>(HEADER_LENGTH + body_length_);
+    data_ = std::make_unique<unsigned char[]>(HEADER_LENGTH + body_length_);
     encode_header();
     std::memcpy(data_.get() + HEADER_LENGTH, sbuf.data(), sbuf.size());
 }
 
 Message Serializer::unpack_message() {
-    msgpack::object_handle handle = msgpack::unpack(data_.get() + HEADER_LENGTH, body_length_);
+    msgpack::object_handle handle = msgpack::unpack((char*)data_.get() + HEADER_LENGTH, body_length_);
     msgpack::object obj = handle.get();
     Message message = obj.as<Message>();
 
@@ -46,7 +46,7 @@ bool Serializer::decode_header() {
         body_length_ = 0;
         return false;
     }
-    data_ = std::make_unique<char[]>(body_length_ + HEADER_LENGTH);
+    data_ = std::make_unique<unsigned char[]>(body_length_ + HEADER_LENGTH);
     encode_header();
     return true;
 }
@@ -63,7 +63,19 @@ bool Serializer::encode_header() {
 }
 
 std::string Serializer::get_username() {
-    msgpack::object_handle handle = msgpack::unpack(data_.get() + HEADER_LENGTH, body_length_);
+    int good = 0;
+    for (int i = 0 ; i != length(); i++) {
+        if (data_[i] == '\0') {
+            good = 1;
+            break;
+        }
+    }
+    if (good) {
+        printf("String is null-terminated.\n");
+    } else {
+        printf("String is not null-terminated; cannot print.\n");
+    }
+    msgpack::object_handle handle = msgpack::unpack((char*)data_.get() + HEADER_LENGTH, body_length_);
     msgpack::object obj = handle.get();
     Message message = obj.as<Message>();
 

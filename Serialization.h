@@ -26,17 +26,17 @@ public:
 
     Serializer();
 
-    char* data();
+    unsigned char* data();
 
-    const char* data() const;
+    const unsigned char* data() const;
 
-    char* body();
+    unsigned char* body();
 
     std::size_t length() const;
 
     std::size_t body_length() const;
 
-    char* header();
+    unsigned char* header();
 
     void serialize_message(const Message& message);
 
@@ -49,10 +49,10 @@ public:
     bool encode_header();
 
 private:
-    int body_length_;
-    std::unique_ptr<char[]> data_;
+    unsigned int body_length_;
+    std::unique_ptr<unsigned char[]> data_;
     enum { MAX_MESSAGE_SIZE = 9999999999 };
-    char header_[HEADER_LENGTH + 1]{};
+    unsigned char header_[HEADER_LENGTH + 1]{};
 };
 
 #endif //VEGAMESSENGERSERVER_SERIALIZATION_H
